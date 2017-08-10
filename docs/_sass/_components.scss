@@ -1,0 +1,745 @@
+/**
+ * Tabs
+ * On the Blog page for posts and categories
+ */
+.tabs {
+  @extend %letter-spacing;
+
+  display: flex;
+  justify-content: space-around;
+  padding: 1em;
+
+  @media (min-width: $mq-md) {
+    padding-left: 8em;
+    padding-right: 8em;
+  }
+
+  @media (min-width: $mq-xxl) {
+    padding-left: 10em;
+    padding-right: 10em;
+  }
+  
+  &__item {
+    cursor: pointer;
+
+    &:not(.active) {
+      @include border-slide($color-black, $color-repo-a);
+    }
+
+    &.active {
+      border-bottom: 3px solid $color-repo-a;
+    }
+  }
+}
+
+.tab {
+
+  &.active {
+    will-change: opacity;
+    animation: fade-in 1s both;
+  }
+}
+
+/**
+ * Blog Post Preview
+ * On the Blog page
+ */
+.previews {
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    padding: 2em;
+
+    color: $color-white;
+    background-image: url('/assets/cover.jpg');
+    background-size: cover;
+
+    span {
+      @extend %letter-spacing;
+
+      font-family: $font-body;
+    }
+
+    h1
+    {
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h2
+    {
+      color: $color-white;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      a
+      {
+        color: $color-white;
+      }
+    }
+
+    p
+    {
+      color: $color-white;
+      font-style: italic;
+      
+      a
+      {
+        color: $color-alpha;
+      }
+    }
+
+    /* sidebars for category archive pages */
+    &.archive-category
+    {
+      @media (min-width: $mq-md)
+      {
+        align-items: inherit;
+        text-align: right;
+
+      }
+
+      /* category-specific colours */
+      // &.repo
+      // {
+
+      // }
+    }
+  }
+}
+
+.preview {
+  transition: background-color 0.2s ease-in-out;
+  
+  &:nth-child(even) {
+    background-color: $color-white;
+  }
+
+  &:hover {
+    background-color: $color-alpha--light;
+
+    .preview__more {
+      box-shadow: inset 175px 0 0 0 $color-alpha;
+      color: $color-white;
+    }
+  }
+
+  &__img {
+    will-change: opacity;
+    animation: fade-in 1s both;
+  }
+
+  &__link {
+    display: block;
+    padding: 2em 1em;
+
+    @media (min-width: $mq-md) {
+      padding: 2em 4em;
+    }
+
+    @media (min-width: $mq-xxl) {
+      padding-left: 5em;
+      padding-right: 5em;
+    }
+  }
+
+  &__date {
+    font-family: $font-header;
+    color: $color-black;
+  }
+
+  &__header {
+    color: $color-black;
+
+    margin-bottom: 0.5em;
+  }
+
+  &__excerpt {
+    color: $color-black;
+  }
+
+  &__more {
+    @include button-slide();
+  }
+}
+
+/**
+ * Category Card
+ * On the blog page under category tab
+ */
+.cards {
+  @include flex-grid(1, 2, $xxl: 3, $pad: 0.25em);
+
+  padding: 2em 1em;
+
+  @media (min-width: $mq-md) {
+    padding: 4em 2em;
+  }
+}
+
+.card {
+
+  &__link {
+    // @include box-shadow(1px);
+
+    position: relative;
+
+    display: block;
+
+    background-color: none;
+    transition: background-color 0.2s ease-in-out;
+
+    &:after {
+      // @include box-shadow(3px);
+
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+
+      height: 100%;
+      width: 100%;
+
+      opacity: 0;
+      will-change: opacity;
+      transition: opacity 0.4s ease-in-out;
+    }
+
+    &:hover {
+      background-color: none;
+
+      &:after {
+        opacity: 1;
+      }
+      
+      .card__more {
+        box-shadow: inset 175px 0 0 0 $color-alpha;
+        color: $color-white;
+      }
+    }
+  }
+
+  &__img {
+    position: relative;
+
+    height: 12em;
+
+    background-color: $color-black;
+
+    &:after {
+      @extend %overlay;
+    }
+  }
+
+  &__container {
+    padding: 1em 0;
+  }
+
+  &__header {
+    color: $color-alpha;
+  }
+
+  &__count {
+    color: $color-black;
+  }
+
+  &__more {
+    @include button-slide(0.25em);
+  }
+}
+
+/**
+ * Pagination
+ * On the Blog page when enough posts to paginate
+ */
+.pagination {
+  @extend %letter-spacing;
+
+  display: flex;
+  width: 100%;
+
+  & > * {
+    display: flex;
+    justify-content: center;
+    flex: 1;
+
+    padding: 2em 0;
+
+    color: $color-white;
+    background-color: $color-black;
+    transition: background-color 0.4s ease-in-out;
+
+    &:hover {
+      color: $color-white;
+      background-color: $color-alpha;
+    }
+  }
+}
+
+/**
+ * Footer
+ */
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 2em;
+  padding-right: 2em;
+
+  @media (min-width: $mq-sm) {
+    flex-direction: row;
+  }
+
+  &__archive {
+    @include border-slide();
+
+    @extend %letter-spacing;
+  }
+
+  &__social {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-top: 1em;
+    
+    /* social icon colours (except in cards) */
+    li a
+    {
+      color: #fff;
+      margin-bottom: 0.75em;
+
+      &:hover
+      {
+        
+      }
+    }
+
+    @media (min-width: $mq-sm) {
+      margin-top: 0;
+      
+    }
+
+    & > *:not(:first-child) {
+      margin-left: 0.75em;
+    }    
+  }
+}
+
+#scroll_to_latest
+{
+  color: #fff;
+  padding: 2em;
+
+  @media (min-width: $mq-md)
+  {
+    display: none;
+  }
+}
+
+.archive-category .footer__social
+{
+  @media (min-width: $mq-md)
+  {
+    margin-left: auto;
+  }
+}
+
+/**
+ * Mast
+ * On the Post page for the header section
+ */
+.mast {
+  position: relative;
+
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  color: $color-white;
+  background-color: $color-black;
+
+  /* shrink it down to a bar if mast == false in yaml */
+  &.mast_off
+  {
+    height: 4.25em
+  }
+
+  &:after {
+    @extend %overlay;
+  }
+
+  &__img {
+    animation: fade-in 2s both;
+  }
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 100%;
+    margin: 0;
+    padding: 1em;
+    background: rgba(0, 0, 0, 0.5);
+
+    @media (min-width: $mq-sm) {
+      padding: 2em;
+    }
+
+    /* ditch the big and expand it out if mast == false in yaml */
+    &.mast_off
+    {
+      background: none;
+      padding: 0;
+      padding-bottom: 2em;
+    }
+
+    h4
+    {
+      font-style: italic;
+      font-weight: normal;
+      font-size: 1.15em;
+      margin: 0;
+    }
+  }
+
+  h1 {
+    line-height: 1.2;
+  }
+}
+
+/**
+ * Navigation
+ */
+.nav {
+  @extend %letter-spacing;
+
+  position: absolute;
+  top: 1.25em;
+  left: 1em;
+  z-index: 99;
+
+  display: flex;
+  align-items: center;
+
+  font-family: $font-body;
+  
+  h2 {
+    font-size: 1em;
+  }
+
+  @media (min-width: $mq-sm) {
+    left: 2em;
+  }
+
+  i {
+
+    @media (min-width: $mq-sm) {
+      margin-right: 0.5em;
+    }
+  }
+
+  span {
+    display: none;
+
+    @media (min-width: $mq-sm) {
+      display: block;
+    }
+  }
+
+  &--black {
+    color: $color-black;
+
+    &:hover,
+    &:active,
+    &:focus {
+      color: $color-black;
+    }
+  }
+
+  &--white {
+    color: $color-white;
+
+    &:hover,
+    &:active,
+    &:focus {
+      color: $color-white;
+    }
+  }
+}
+
+/**
+ * Post
+ */
+.post {
+  width: 90%;
+  max-width: $mq-md;
+  margin: 0 auto;
+
+  font-family: $font-post;
+
+  @media (min-width: calc($mq-md + 2em)) {
+    max-width: $mq-md;
+  }
+
+  h1, 
+  h2 {
+    line-height: 1.2;
+  }
+
+  a {
+    border-bottom: 1px solid $color-alpha;
+  }
+
+  img {
+    padding-bottom: 0.75em;
+  }
+
+  figure {
+    padding-bottom: 0.75em;
+  }
+
+  figure > img {
+    padding-bottom: 0;
+  }
+
+  /* code block figures */
+  figure.highlight
+  {
+    padding-bottom: 0;
+    margin-bottom: 25px;
+    border-radius: 5px;
+    border: 1px solid black;
+    overflow: auto;
+
+    background: #333339;
+
+    > pre
+    {
+      margin: 0;
+    }
+
+    td.gutter
+    {
+      border-right: 1px solid #666;
+    }
+  }
+
+  /* inline code */
+  p code
+  {
+    background: #eee;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    color: #d06;
+    padding: 2px;
+  }
+
+  /* all code (inline + figures) */
+  pre, code
+  {
+    font-size: 0.85em;
+    font-family: 'Input Mono';
+  }
+
+  /* bulleted lists */
+  ol
+  {
+    list-style-type: decimal;
+  }
+
+  ul
+  {
+    list-style-type: disc;
+  }
+}
+
+/**
+ * Profile Card
+ */
+.profile {
+  width: 90%;
+  max-width: $mq-md;
+  margin: 0 auto;
+  padding-bottom: 4em;
+
+  @media (min-width: $mq-md) {
+    width: 55%;
+  }
+
+  &__card {
+    @include box-shadow(1px);
+
+    display: flex;
+    flex-direction: column;
+
+    @media (min-width: $mq-md) {
+      flex-direction: row;
+    }
+  }
+
+  &__img {
+    position: relative;
+    padding: 1em 1em 0 1em;
+    background-color: none;
+    margin-bottom: 1em;
+
+    @media (min-width: $mq-md) {
+      min-height: 15em;
+      padding: 2.5em 1em;
+      flex-basis: 35%;
+      max-width: 35%;
+      margin-bottom: 0;
+    }
+
+    &:after {
+      // @extend %overlay;
+    }
+
+    &> figure
+    {
+      position: static;
+      height: 125px;
+      width: 125px;
+      min-height: 125px;
+      margin: auto;
+      border-radius: 50%;
+      background-color: none;
+
+    }
+
+    &.home
+    {
+        flex-basis: auto;
+        height: 125px;
+        width: 125px;
+        min-height: 125px;
+        margin-bottom: 1em;
+        padding: 0;
+        &> figure
+        {
+          height: 125px;
+          width: 125px;
+        }
+    }
+  }
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0 1em 1em 1em;
+
+    background-color: $color-white;
+
+    @media (min-width: $mq-md) {
+      flex-basis: 65%;
+      max-width: 65%;
+      padding: 1em;
+    }
+  }
+
+  &__social {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+
+    li a
+    {
+      margin-bottom: 0.75em;
+    }
+
+    & > *:not(:first-child) {
+      margin-left: 1em;
+    }
+  }
+}
+
+/**
+ * Next Post
+ * On the Post page for single post pagination
+ */
+.next {
+  background-color: $color-black;
+
+  &__link {
+    display: block;
+    height: 8em;
+    padding: 3em 0;
+
+    color: $color-white;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: 50%;
+
+    &:after {
+      @extend %overlay;
+    }
+
+    &:hover {
+      color: $color-white;
+    }
+
+    &:hover:after {
+      background-color: rgba($color-alpha, 0.8);
+    }
+  }
+
+  &__container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+
+    text-align: center;
+
+    span {
+      @extend %letter-spacing;
+
+      font-family: $font-body;
+    }
+  }
+}
+
+/**
+ * Archives Page
+ * Should be layout, but more elements added
+ */
+.archives {
+
+  &__header {
+    @extend %letter-spacing;
+
+    padding: 1em;
+
+    text-align: center;
+
+    span {
+      border-bottom: 3px solid $color-alpha;
+    }
+  }
+
+  &__container {
+    @include flex-grid(1, 2, 3, $xxl: 4, $pad: 0.25em);
+
+    max-width: $mq-xl;
+    margin: 0 auto;
+    padding-left: 1em;
+    padding-right: 1em;
+  }
+}
+
+/* papers: archive tabs for papers. no flex grid, just some padding */
+.papers {
+    max-width: $mq-md;
+    margin: 0 auto;
+    padding-left: 1em;
+    padding-right: 1em;
+} 

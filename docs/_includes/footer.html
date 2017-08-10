@@ -1,0 +1,11 @@
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/wow/1.1.2/wow.min.js"></script>
+<script type="text/javascript" src="{{ '/assets/js/app.js' | prepend: site.baseurl }}"></script>
+
+<!-- using any external JS libs or my own JS code for a post/page?
+     specify them in the YAML with my_js and ext_js -->
+{% for ext_js in page.ext_js %}
+    <script type="text/javascript" src="{{ ext_js.url }}"></script>
+{% endfor %}
+{% if page.my_js %}
+    <script type="text/javascript" src="/assets/js/{{ page.my_js }}"></script>
+{% endif %}

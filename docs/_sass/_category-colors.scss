@@ -1,0 +1,53 @@
+/* fancy gradient headings! */
+h1, h2.card__header
+{
+    color: $color-repo-a;
+    background: -webkit-linear-gradient(to top right,
+        $color-repo-a,
+        $color-repo-a,
+        $color-repo-b);
+    background: -moz-linear-gradient(to top right,
+        $color-repo-a,
+        $color-repo-a,
+        $color-repo-b);
+    background: linear-gradient(to top right,
+        $color-repo-a,
+        $color-repo-a,
+        $color-repo-b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.mast__container h1, .preview h1
+{   
+    background: -webkit-linear-gradient(to top right,
+        $color-repo-a,
+        $color-repo-b);
+    background: -moz-linear-gradient(to top right,
+        $color-repo-a,
+        $color-repo-b);
+    background: linear-gradient(to top right,
+        $color-repo-a,
+        $color-repo-b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: $color-repo-a;
+    
+}
+
+.preview
+{
+    &:hover:after
+    {
+        background-color: rgba($color-repo-a, 0.6) 
+    }
+}
+
+/* archive background hover colour */
+.card {
+    &__link { 
+        &:hover {
+        background-color: $color-repo-light;
+        }
+    }
+}
