@@ -26,6 +26,7 @@ year_start = 1900
 year_end = 2012
 
 # download gapminder files if they haven't been downloaded before
+message(run.time(), ' downloading any missing gapminder data')
 gap_files = data_frame(
   repo = c(
     'ddf--gapminder--population',
@@ -43,31 +44,27 @@ gap_files = data_frame(
       'forestry_mtco2--by--country--year.csv')),
   url = paste0(on_url, repo, '/master/', file))
 mapply(download.file,
-  gap_files$url[which(!file.exists(gap_files$file))],
+  gap_files$url[which(!file.exists(paste0('data/', gap_files$file)))],
   destfile =
-    paste('data/', gap_files$file[which(!file.exists(gap_files$file))]))
-
+    paste0('data/', gap_files$file[which(!file.exists(gap_files$file))]))
 
 # load and tidy gapminder country equivalences
+message(run.time(), ' loading and tidying any missing gapminder data')
 geo_gap =
-  read_csv(paste0('data/ddf--entities--geo--country.csv')) %>%
+  read_csv('data/ddf--entities--geo--country.csv') %>%
   select(country, name)
 geo_co2 =
-  read_csv(paste0('data/',
-    'ddf--cait--historical_emissions/master/ddf--entities--country.csv'))
+  read_csv('data/ddf--entities--country.csv')
 
 # download and tidy gapminder data sets
-message(run.time(), ' downloading gapminder data')
 gdp_percap = 
-  read_csv(
-    paste0('data/ddf--datapoints--gdp_per_capita_cppp--by--geo--time.csv')) %>%
+  read_csv('data/ddf--datapoints--gdp_per_capita_cppp--by--geo--time.csv') %>%
   rename(country = geo, year = time, gdppc = gdp_per_capita_cppp) %>%
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_gap) %>%
   select(name, year, gdppc)
 pop =
-  read_csv(
-    paste0('data/ddf--datapoints--population--by--country--year.csv')) %>%
+  read_csv('data/ddf--datapoints--population--by--country--year.csv') %>%
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_gap) %>%
   select(name, year, population)
@@ -121,14 +118,17 @@ temp =
   lapply(
     berk_files$name_lowercase, function(x)
     {
-      message(run.time(), ' downloading berkley temperature data for ', x)
       if (!file.exists(paste0('data/', x, '-TAVG-Trend.txt')))
       {
+        message(run.time(), ' downloading berkley temperature data for ', x)
         download.file(paste0(berk_url, x, '-TAVG-Trend.txt'),
           destfile = paste0('data/', x, '-TAVG-Trend.txt'))
+      } else
+      {
+        message(run.time(), ' found berkley temperature data for ', x)
       }
       read_table2(
-        paste0(berk_url, x, '-TAVG-Trend.txt'),
+        paste0('data/', x, '-TAVG-Trend.txt'),
         comment = '%', skip = 1, col_types = 'ii--dd------',
         col_names = FALSE) %>%
         mutate(name_lowercase = x)
