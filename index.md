@@ -1,7 +1,7 @@
 ---
 layout: page
-title: Blank Project
-description: A mirror of my personal website template for any projects that might need their own repo.
+title: Steam Train Plot
+description: Who put greenhouse gases in the sky, and who's going to suffer for them?
 categories: projects
 date: 2017-08-10
 image: cover.jpg
@@ -10,4 +10,6 @@ mast: true
 # they're $color-repo-a, $color-repo-b and $color-repo-light
 ---
 
-Here's some fun _content!_
+## Data sources
+
+GDP by country: The Maddison-Project, http://www.ggdc.net/maddison/maddison-project/home.htm, 2013 version.
