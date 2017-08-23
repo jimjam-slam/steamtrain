@@ -26,7 +26,6 @@ year_start = 1900
 year_end = 2012
 
 # download gapminder files if they haven't been downloaded before
-message(run.time(), ' downloading any missing gapminder data')
 gap_files = data_frame(
   repo = c(
     'ddf--gapminder--population',
@@ -43,10 +42,19 @@ gap_files = data_frame(
       'ddf--datapoints--total_co2_emissions_excluding_land_use_change_and_',
       'forestry_mtco2--by--country--year.csv')),
   url = paste0(on_url, repo, '/master/', file))
-mapply(download.file,
-  gap_files$url[which(!file.exists(paste0('data/', gap_files$file)))],
-  destfile =
-    paste0('data/', gap_files$file[which(!file.exists(gap_files$file))]))
+gap_files_to_download = which(!file.exists(paste0('data/', gap_files$file)))
+
+if (length(gap_files_to_download) > 0)
+{
+  message(run.time(), ' downloading missing gapminder data')
+  mapply(download.file,
+    gap_files$url[which(!file.exists(paste0('data/', gap_files$file)))],
+    destfile =
+      paste0('data/', gap_files$file[which(!file.exists(gap_files$file))]))
+} else
+{
+  message(run.time(), ' found all gapminder data')
+}
 
 # load and tidy gapminder country equivalences
 message(run.time(), ' loading and tidying any missing gapminder data')
