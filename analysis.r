@@ -1,4 +1,4 @@
-# build fancy steam train plot from downloaded gapminder and berkley earth data
+# build fancy steam train plot from downloaded gapminder and berkeley earth data
 # james goldie ('rensa'), august 2017
 
 library(RCurl)
@@ -8,8 +8,9 @@ library(magrittr)
 library(readxl)
 library(stringr)
 library(fuzzyjoin)
-library(gganimate)
 library(viridis)
+library(gganimate)
+library(tweenr)
 filter = dplyr::filter # this is going to kill me one day
 
 source('util.r')
@@ -50,7 +51,7 @@ if (length(gap_files_to_download) > 0)
   mapply(download.file,
     gap_files$url[which(!file.exists(paste0('data/', gap_files$file)))],
     destfile =
-      paste0('data/', gap_files$file[which(!file.exists(gap_files$file))]))
+      paste0('data/', gap_files$file[which(!file.exists(gap_files$file))])) 
 } else
 {
   message(run.time(), ' found all gapminder data')
@@ -85,55 +86,75 @@ co2 =
   inner_join(geo_co2) %>%
   select(name, year, co2)
 
-# combine gapminder datasets
+# combine gapminder datasets,
+# rank countries each year by their gdp per capita
+# claculation global pop, pop fraction and number of poorer people each year
 message(run.time(), ' combining gapminder data')
 gapdata = co2 %>%
   inner_join(gdp_percap, by = c('name', 'year')) %>%
   inner_join(pop, by = c('name', 'year')) %>%
-  mutate(name_lowercase = str_to_lower(name))
+  mutate(annual_devrank = ave(gdppc, year, FUN = rank)) %>%
+  group_by(year) %>%
+  arrange(annual_devrank) %>%
+  mutate(
+    pop_global = sum(population),
+    pop_fraction = population / pop_global,
+    pop_poorer = cumsum(population) - population,
+    pop_poorer_fraction = pop_poorer / pop_global) %>%
+  ungroup() %>%
+  mutate(., emission_id = group_indices(., name, year))
 
-# this is the gistemp version... it's not available by country
-# temp =
-#   read_csv(
-#     paste0(giss_url, 'tmp.4_obsLOTI_E5_12_1880_2017_1951_1980-0/global.csv'),
-#     skip = 1, col_types = cols(.default = col_double())) %>%
-#   rename(year = Year, monthly_temp = `Global Mean`) %>%
-#   filter(year >= year_start, year <= year_end) %>%
-#   mutate(year = floor(year)) %>%
-#   group_by(year) %>%
-#   summarise(mean_temp = mean(monthly_temp))
-
-# scrape a list of available berkley earth country temp data files and
+# scrape a list of available berkeley earth country temp data files and
 # match them fuzzily against gapdata countries
-message(run.time(), ' scraping list of available berkley temperature data')
+message(run.time(), ' scraping list of available berkeley temperature data')
 berk_files =
   data_frame(
     filename = berk_url %>% read_html %>% html_nodes('a') %>% html_text) %>%
   slice(-(1:6)) %>%
   mutate(
-    name_lowercase = str_replace(filename, '-TAVG-Trend.txt', ''),
-    name = str_to_title(name_lowercase)) %>%
-  # problematic rows
-  filter(!name %in% c('Pará', 'Côte-D\'ivoire')) %>%
-  stringdist_semi_join(gapdata, by = 'name_lowercase',
-    distance_col = 'gapmatch')
+    name_lowercase = str_replace(filename, '-TAVG-Trend.txt', '')) %>%
+  # drop some tricky rows (utf escaping problems? TODO)
+  filter(!name_lowercase %in% c('pará', 'côte-d\'ivoire'))
 
-# TODO - got about 180 countries between all datasets at this point
+# okay, now do a loose fuzzy match between gapminder names and berkeley names and choose the best reuslts for each gapminder file. this strips out whitespace and punctuation first, as they bias the fuzzy matching algorithm
+message(run.time(), ' fuzzy joining gapminder and berkeley country names')
+gapdata_names = data_frame(
+  name = unique(gapdata$name),
+  name_nopunc = str_to_lower(str_replace_all(name, ' ', '')))
+name_matches =
+  data_frame(
+    name_lowercase = unique(berk_files$name_lowercase),
+    name_lowercase_nopunc = str_replace_all(name_lowercase, '-', ''))
+
+name_matches %<>%
+  stringdist_inner_join(gapdata_names, by = c(name_lowercase_nopunc = 'name_nopunc'),
+    max_dist = 5, distance_col = 'match_dist') %>%
+  group_by(name) %>%
+  top_n(-1, wt = match_dist) %>%
+  ungroup() %>%
+  filter(match_dist <= 1) %>%
+  select(name, name_lowercase, match_dist)
+
+# now bolt the matches onto the berkeley list and the gapminder data
+berk_files %<>% inner_join(name_matches, by = 'name_lowercase')
+gapdata %<>% inner_join(name_matches, by = 'name')
+
+# TODO - got about 160 countries between all datasets at this point
 # might need to fiddle with the strings to get the edge cases...
 
-# download them all, tag each one with the country and bind them together
+# download berkeley files, tag each one with the country and bind them together
 temp =
   lapply(
     berk_files$name_lowercase, function(x)
     {
       if (!file.exists(paste0('data/', x, '-TAVG-Trend.txt')))
       {
-        message(run.time(), ' downloading berkley temperature data for ', x)
+        message(run.time(), ' downloading berkeley temperature data for ', x)
         download.file(paste0(berk_url, x, '-TAVG-Trend.txt'),
           destfile = paste0('data/', x, '-TAVG-Trend.txt'))
       } else
       {
-        message(run.time(), ' found berkley temperature data for ', x)
+        message(run.time(), ' found berkeley temperature data for ', x)
       }
       read_table2(
         paste0('data/', x, '-TAVG-Trend.txt'),
@@ -146,12 +167,39 @@ temp =
   filter(year >= year_start & year <= year_end & month == 6) %>%
   select(-month) %>%
   mutate(
-    name = str_to_title(name_lowercase),
     temp_min = temp - temp_unc,
-    temp_max = temp + temp_unc)
+    temp_max = temp + temp_unc) %>%
+  inner_join(name_matches, by = 'name_lowercase')
 
-# WARNING - this looks like it takes a looooooong time. maybe don't.
-# all_data = temp %>%
-#   stringdist_inner_join(gapdata, by = c('name', 'year'))
+# finally, join the datasets together (and order them by devrank for each
+# year for the plot)
+message(run.time(), ' joining berkeley and gapminder data')
+all_data =
+  inner_join(gapdata, temp,
+    by = c('name', 'name_lowercase', 'year', 'match_dist'))
+  # arrange(year, annual_devrank)
+write_csv(all_data, 'data/gapminder-berkeley-tidy.csv')
 
-# start plotting! 
+# message(run.time(), ' building steam train plot')
+# changing the order of the bars each frame doesn't look like it's going
+# to happen easily. instead, i might calculate the 'cumulative population'
+# and use this to position each bar manually.
+# actually, maybe i'll forget using ggplotly or even gganimate and just
+# manually create the frames
+
+# okay, new approach using tweenr: break all_data up into a list of data frames,
+# then manually convert country to an ordered factor for each year list element.
+# then gganimate...? maybe?
+
+# data_by_year = list(
+#   all_data %<>% mutate(age = 0),
+#   all_data %<>% mutate(age = 10, year = year + 10))
+
+# data_by_year %<>% bind_rows
+
+# emission bubbles plot
+# emission_tweens = tween_states(data_by_year, tweenlength = 1,
+#   statelength = 0.25, ease = 'linear', nframes = (year_end - year_start) * 5)
+
+# emission_plot = ggplot(emission_tweens) +
+#   geom_point(aes(x = pop_poorer_fraction + (pop_fraction / 2), y = ))
