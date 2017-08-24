@@ -180,7 +180,39 @@ all_data =
   # arrange(year, annual_devrank)
 write_csv(all_data, 'data/gapminder-berkeley-tidy.csv')
 
-# message(run.time(), ' building steam train plot')
+message(run.time(), ' building steam train plot')
+
+bubble_data = all_data %>%
+  select(co2, pop_poorer_fraction, pop_fraction, year, emission_id) %>%
+  rename(emission_year = year)
+  # mutate(age = 0)
+
+# bubble_list = list(bubble_data, bubble_data, bubble_data, bubble_data,
+#   bubble_data, bubble_data, bubble_data, bubble_data, bubble_data, bubble_data)
+# for (i in 1:length(bubble_list))
+# {
+#   bubble_list[[i]]$age = i - 1
+#   bubble_list[[i]]$emission_year = bubble_list[[i]]$emission_year + i - 1
+# }
+# b
+# bubble_list %<>% bind_rows
+# bubble_list = split(bubble_list, bubble_list$emission_year)
+
+tw = tween_appear(bubble_data, time = 'emission_year')
+
+bubble_plot = ggplot(tw) +
+  geom_point(
+    aes(
+      x = pop_poorer_fraction + pop_fraction / 2,
+      y = .age,
+      size = co2,
+      frame = .frame))
+animation::ani.options(interval = 1/10)
+gganimate(bubble_plot, '~/Desktop/steamtrain-out/bubble.mp4',
+  ani.width = 800, ani.height = 600)
+# tw = tween_states(bubble_list, tweenlength = 1, statelength = 0.25,
+#   ease = 'linear', nframes = (year_end - year_start) * 5)
+
 # changing the order of the bars each frame doesn't look like it's going
 # to happen easily. instead, i might calculate the 'cumulative population'
 # and use this to position each bar manually.
