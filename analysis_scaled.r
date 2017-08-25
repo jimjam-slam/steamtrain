@@ -5,10 +5,8 @@ library(RCurl)
 library(rvest)
 library(tidyverse)
 library(magrittr)
-library(readxl)
 library(stringr)
 library(fuzzyjoin)
-library(viridis)
 library(gganimate)
 library(tweenr)
 filter = dplyr::filter # this is going to kill me one day
@@ -19,7 +17,7 @@ on_url = 'https://raw.githubusercontent.com/open-numbers/'
 berk_url = 'http://berkeleyearth.lbl.gov/auto/Regional/TAVG/Text/'
 year_start = 1900
 year_end = 2012
-frames_per_year = 2
+frames_per_year = 30
 plot_font_1 = 'Helvetica Neue Light'
 plot_font_2 = 'Helvetica Neue'
 
@@ -217,9 +215,9 @@ stplot = ggplot() +
       size = co2,
       frame = .frame),
     alpha = 0.1, width = 0, height = 0.1, colour = '#333333') +
-  annotate('text', x = 0.025, y = 0.125, size = 14, label = 'Poorest',
+  annotate('text', x = 0.0375, y = 0.125, size = 14, label = 'Poorest',
     family = plot_font_1) +
-  annotate('text', x = 0.925, y = 0.125, size = 14, label = 'Wealthiest',
+  annotate('text', x = 0.945, y = 0.125, size = 14, label = 'Wealthiest',
     family = plot_font_1) +
   scale_x_continuous(labels = scales::percent,
     name = 'Percentile of GDP per capita (2010 $US)',
@@ -228,8 +226,6 @@ stplot = ggplot() +
     name = 'Temperature anomaly (°C)', expand = c(0, 0)) +
   scale_size_area(name = 'Annual CO2 emissions (excluding land use)',
     max_size = 80, guide = FALSE) +
-  # scale_fill_viridis(begin = 0.75, end = 1, limits = c(0, 3),
-  #   option = 'inferno', direction = -1, guide = FALSE) +
   ggtitle('Historical CO2 emissions, GDP per capita and temperature rise',
     subtitle = paste('Who contributed to the greenhouse effect,',
       'and who suffers for it?')) +
@@ -237,10 +233,12 @@ stplot = ggplot() +
   theme(
     plot.title = element_text(family = plot_font_2, face = 'bold'),
     plot.margin = margin(rep(20, 4), 'px'),
-    axis.line.y = element_blank())
+    axis.ticks.x = element_blank(),
+    axis.line.y = element_blank(),
+    axis.ticks.y = element_blank())
 
 message(run.time(), ' rendering emissions plot')
-animation::ani.options(interval = 1 / frames_per_year)
+animation::ani.options(interval = 0.5 / frames_per_year)
 gganimate(stplot, '~/Desktop/steamtrain-out/bubble_gdppc_scaled.mp4',
   ani.width = 1920, ani.height = 1080, title_frame = FALSE)
 
