@@ -2,5 +2,6 @@ _site
 .sass-cache
 .DS_Store
 _includes/css/bootstrap.css
-data/*.csv
-data/*.txt
+data/global.csv
+data/*ddf--*.csv
+data/*-TAVG-Trend.txt
