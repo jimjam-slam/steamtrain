@@ -12,21 +12,23 @@ library(viridis)
 library(gganimate)
 library(tweenr)
 filter = dplyr::filter # this is going to kill me one day
-
 source('util.r')
+
+# constants
+on_url = 'https://raw.githubusercontent.com/open-numbers/'
+berk_url = 'http://berkeleyearth.lbl.gov/auto/Regional/TAVG/Text/'
+year_start = 1900
+year_end = 2012
+frames_per_year = 5
+plot_font = 'Helvetica Neue'
+
+# create data directory if it's missing
 if(!dir.exists('data'))
 {
   dir.create('data')
 }
 
-# constants
-on_url = 'https://raw.githubusercontent.com/open-numbers/'
-giss_url = 'https://data.giss.nasa.gov/tmp/modelE/ltmap/'
-berk_url = 'http://berkeleyearth.lbl.gov/auto/Regional/TAVG/Text/'
-year_start = 1900
-year_end = 2012
-
-# download gapminder files if they haven't been downloaded before
+# download gapminder files if they're missing
 gap_files = data_frame(
   repo = c(
     'ddf--gapminder--population',
@@ -44,7 +46,6 @@ gap_files = data_frame(
       'forestry_mtco2--by--country--year.csv')),
   url = paste0(on_url, repo, '/master/', file))
 gap_files_to_download = which(!file.exists(paste0('data/', gap_files$file)))
-
 if (length(gap_files_to_download) > 0)
 {
   message(run.time(), ' downloading missing gapminder data')
@@ -57,7 +58,7 @@ if (length(gap_files_to_download) > 0)
   message(run.time(), ' found all gapminder data')
 }
 
-# load and tidy gapminder country equivalences
+# load and tidy gapminder country code maps
 message(run.time(), ' loading and tidying any missing gapminder data')
 geo_gap =
   read_csv('data/ddf--entities--geo--country.csv') %>%
@@ -65,7 +66,7 @@ geo_gap =
 geo_co2 =
   read_csv('data/ddf--entities--country.csv')
 
-# download and tidy gapminder data sets
+# load and tidy gapminder data sets
 gdp_percap = 
   read_csv('data/ddf--datapoints--gdp_per_capita_cppp--by--geo--time.csv') %>%
   rename(country = geo, year = time, gdppc = gdp_per_capita_cppp) %>%
@@ -171,67 +172,63 @@ temp =
     temp_max = temp + temp_unc) %>%
   inner_join(name_matches, by = 'name_lowercase')
 
-# finally, join the datasets together (and order them by devrank for each
-# year for the plot)
+# finally, join the datasets together
 message(run.time(), ' joining berkeley and gapminder data')
 all_data =
   inner_join(gapdata, temp,
     by = c('name', 'name_lowercase', 'year', 'match_dist'))
-  # arrange(year, annual_devrank)
 write_csv(all_data, 'data/gapminder-berkeley-tidy.csv')
 
-message(run.time(), ' building steam train plot')
-
+message(run.time(), ' trimming excess data for bubble plot')
 bubble_data = all_data %>%
   select(co2, pop_poorer_fraction, pop_fraction, year, emission_id) %>%
-  rename(emission_year = year)
-  # mutate(age = 0)
+  mutate(emission_year = year - year_start)
+bar_data = all_data %<>%
+  select(name, temp, pop_poorer_fraction, pop_fraction, year) %>%
+  mutate(
+    emission_year = year - year_start,
+    ease = 'exponential-in-out')
 
-# bubble_list = list(bubble_data, bubble_data, bubble_data, bubble_data,
-#   bubble_data, bubble_data, bubble_data, bubble_data, bubble_data, bubble_data)
-# for (i in 1:length(bubble_list))
-# {
-#   bubble_list[[i]]$age = i - 1
-#   bubble_list[[i]]$emission_year = bubble_list[[i]]$emission_year + i - 1
-# }
-# b
-# bubble_list %<>% bind_rows
-# bubble_list = split(bubble_list, bubble_list$emission_year)
+message(run.time(), ' interpolating emissions and temp data for animation')
+tw_bubble = tween_appear(bubble_data, time = 'emission_year',
+  timerange = c(year_start, year_end),
+  nframes = frames_per_year * (year_end - year_start))
+tw_bar = tween_elements(bar_data, time = 'emission_year',
+  group = 'name', ease = 'ease',
+  nframes = frames_per_year * (year_end - year_start))
 
-tw = tween_appear(bubble_data, time = 'emission_year')
-
-bubble_plot = ggplot(tw) +
-  geom_point(
+message(run.time(), ' building emissions plot')
+bubble_plot = ggplot() +
+  # temperature columns
+  geom_col(data = tw_bar,
     aes(
       x = pop_poorer_fraction + pop_fraction / 2,
-      y = .age,
+      y = temp,
+      width = pop_fraction,
+      frame = .frame),
+      fill = temp, position = 'identity') +
+  # annual emission bubbles
+  geom_jitter(data = tw_bubble,
+    aes(
+      x = pop_poorer_fraction + pop_fraction / 2,
+      y = 2 * atan(2 * .age) + 0.3 * sin(2 * .age),
       size = co2,
-      frame = .frame))
-animation::ani.options(interval = 1/10)
-gganimate(bubble_plot, '~/Desktop/steamtrain-out/bubble.mp4',
-  ani.width = 800, ani.height = 600)
-# tw = tween_states(bubble_list, tweenlength = 1, statelength = 0.25,
-#   ease = 'linear', nframes = (year_end - year_start) * 5)
+      frame = .frame),
+    alpha = 0.1, width = 0, height = 0.1) +
+  scale_x_continuous(labels = scales::percent,
+    name = 'GDP per capita percentile', breaks = seq(0, 1, 0.25)) +
+  scale_y_continuous(limits = c(0, 3.5),
+    name = 'Temperature anomaly (°C)') +
+  scale_size_area(name = 'Annual CO2 emissions (excluding land use)',
+    max_size = 80, guide = FALSE) +
+  scale_fill_viridis(begin = 0.5, end = 1, option = 'inferno',
+    direction = -1) +
+  theme_classic(base_size = 32, base_family = plot_font) +
+  theme(legend.position = 'bottom', legend.direction = 'horizontal')
 
-# changing the order of the bars each frame doesn't look like it's going
-# to happen easily. instead, i might calculate the 'cumulative population'
-# and use this to position each bar manually.
-# actually, maybe i'll forget using ggplotly or even gganimate and just
-# manually create the frames
+message(run.time(), ' rendering emissions plot')
+animation::ani.options(interval = 1 / frames_per_year)
+gganimate(bubble_plot, '~/Desktop/steamtrain-out/bubble_gdppc_scaled.mp4',
+  ani.width = 1920, ani.height = 1080)
 
-# okay, new approach using tweenr: break all_data up into a list of data frames,
-# then manually convert country to an ordered factor for each year list element.
-# then gganimate...? maybe?
-
-# data_by_year = list(
-#   all_data %<>% mutate(age = 0),
-#   all_data %<>% mutate(age = 10, year = year + 10))
-
-# data_by_year %<>% bind_rows
-
-# emission bubbles plot
-# emission_tweens = tween_states(data_by_year, tweenlength = 1,
-#   statelength = 0.25, ease = 'linear', nframes = (year_end - year_start) * 5)
-
-# emission_plot = ggplot(emission_tweens) +
-#   geom_point(aes(x = pop_poorer_fraction + (pop_fraction / 2), y = ))
+message(run.time(), ' done!')
