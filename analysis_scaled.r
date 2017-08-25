@@ -9,6 +9,7 @@ library(stringr)
 library(fuzzyjoin)
 library(gganimate)
 library(tweenr)
+library(viridis)
 filter = dplyr::filter # this is going to kill me one day
 source('util.r')
 
@@ -17,7 +18,7 @@ on_url = 'https://raw.githubusercontent.com/open-numbers/'
 berk_url = 'http://berkeleyearth.lbl.gov/auto/Regional/TAVG/Text/'
 year_start = 1900
 year_end = 2012
-frames_per_year = 30
+frames_per_year = 1
 plot_font_1 = 'Helvetica Neue Light'
 plot_font_2 = 'Helvetica Neue'
 
@@ -191,10 +192,10 @@ bar_data = all_data %<>%
 message(run.time(), ' interpolating emissions and temp data for animation')
 bubble_tw = tween_appear(bubble_data, time = 'emission_year',
   timerange = c(year_start, year_end),
-  nframes = frames_per_year * (year_end - year_start + 5))
+  nframes = frames_per_year * (year_end - year_start))
 bar_tw = tween_elements(bar_data, time = 'emission_year',
   group = 'name', ease = 'ease',
-  nframes = frames_per_year * (year_end - year_start + 5))
+  nframes = frames_per_year * (year_end - year_start))
 
 message(run.time(), ' building emissions plot')
 stplot = ggplot() +
@@ -202,11 +203,11 @@ stplot = ggplot() +
   geom_col(data = bar_tw,
     aes(
       x = pop_poorer_fraction + pop_fraction / 2,
+      fill = pop_poorer_fraction + pop_fraction / 2,
       y = temp,
-      # fill = temp,
       width = pop_fraction,
       frame = .frame),
-    position = 'identity', fill = '#ffdf00') +
+    position = 'identity') +
   # annual emission bubbles
   geom_jitter(data = bubble_tw,
     aes(
@@ -215,6 +216,10 @@ stplot = ggplot() +
       size = co2,
       frame = .frame),
     alpha = 0.1, width = 0, height = 0.1, colour = '#333333') +
+  geom_text(data = bar_tw,
+    aes(label = as.integer(.frame / frames_per_year + year_start),
+    frame = .frame, x = 0.5, y = 0.125),
+    size = 14, family = plot_font_2, fontface = 'bold') +
   annotate('text', x = 0.0375, y = 0.125, size = 14, label = 'Poorest',
     family = plot_font_1) +
   annotate('text', x = 0.945, y = 0.125, size = 14, label = 'Wealthiest',
@@ -226,16 +231,20 @@ stplot = ggplot() +
     name = 'Temperature anomaly (°C)', expand = c(0, 0)) +
   scale_size_area(name = 'Annual CO2 emissions (excluding land use)',
     max_size = 80, guide = FALSE) +
+  scale_fill_viridis(begin = 0.75, end = 1, limits = c(0, 1),
+    option = 'plasma', guide = FALSE) +
   ggtitle('Historical CO2 emissions, GDP per capita and temperature rise',
     subtitle = paste('Who contributed to the greenhouse effect,',
       'and who suffers for it?')) +
-  theme_classic(base_size = 32, base_family = plot_font) +
+  theme_classic(base_size = 32, base_family = plot_font_1) +
   theme(
     plot.title = element_text(family = plot_font_2, face = 'bold'),
     plot.margin = margin(rep(20, 4), 'px'),
     axis.ticks.x = element_blank(),
     axis.line.y = element_blank(),
-    axis.ticks.y = element_blank())
+    axis.ticks.y = element_blank(),
+    panel.background = element_rect(fill = '#f8f9f9'),
+    plot.background = element_rect(fill = '#f8f9f9'))
 
 message(run.time(), ' rendering emissions plot')
 animation::ani.options(interval = 0.5 / frames_per_year)
