@@ -19,8 +19,9 @@ on_url = 'https://raw.githubusercontent.com/open-numbers/'
 berk_url = 'http://berkeleyearth.lbl.gov/auto/Regional/TAVG/Text/'
 year_start = 1900
 year_end = 2012
-frames_per_year = 5
-plot_font = 'Helvetica Neue'
+frames_per_year = 2
+plot_font_1 = 'Helvetica Neue Light'
+plot_font_2 = 'Helvetica Neue'
 
 # create data directory if it's missing
 if(!dir.exists('data'))
@@ -190,45 +191,57 @@ bar_data = all_data %<>%
     ease = 'exponential-in-out')
 
 message(run.time(), ' interpolating emissions and temp data for animation')
-tw_bubble = tween_appear(bubble_data, time = 'emission_year',
+bubble_tw = tween_appear(bubble_data, time = 'emission_year',
   timerange = c(year_start, year_end),
-  nframes = frames_per_year * (year_end - year_start))
-tw_bar = tween_elements(bar_data, time = 'emission_year',
+  nframes = frames_per_year * (year_end - year_start + 5))
+bar_tw = tween_elements(bar_data, time = 'emission_year',
   group = 'name', ease = 'ease',
-  nframes = frames_per_year * (year_end - year_start))
+  nframes = frames_per_year * (year_end - year_start + 5))
 
 message(run.time(), ' building emissions plot')
-bubble_plot = ggplot() +
+stplot = ggplot() +
   # temperature columns
-  geom_col(data = tw_bar,
+  geom_col(data = bar_tw,
     aes(
       x = pop_poorer_fraction + pop_fraction / 2,
       y = temp,
+      # fill = temp,
       width = pop_fraction,
       frame = .frame),
-      fill = temp, position = 'identity') +
+    position = 'identity', fill = '#ffdf00') +
   # annual emission bubbles
-  geom_jitter(data = tw_bubble,
+  geom_jitter(data = bubble_tw,
     aes(
       x = pop_poorer_fraction + pop_fraction / 2,
-      y = 2 * atan(2 * .age) + 0.3 * sin(2 * .age),
+      y = 1.75 * atan(2 * .age) + 0.3 * sin(2 * .age),
       size = co2,
       frame = .frame),
-    alpha = 0.1, width = 0, height = 0.1) +
+    alpha = 0.1, width = 0, height = 0.1, colour = '#333333') +
+  annotate('text', x = 0.025, y = 0.125, size = 14, label = 'Poorest',
+    family = plot_font_1) +
+  annotate('text', x = 0.925, y = 0.125, size = 14, label = 'Wealthiest',
+    family = plot_font_1) +
   scale_x_continuous(labels = scales::percent,
-    name = 'GDP per capita percentile', breaks = seq(0, 1, 0.25)) +
-  scale_y_continuous(limits = c(0, 3.5),
-    name = 'Temperature anomaly (°C)') +
+    name = 'Percentile of GDP per capita (2010 $US)',
+      breaks = seq(0, 1, 0.25), limits = c(0, 1), expand = c(0, 0.02)) +
+  scale_y_continuous(breaks = 1:3, limits = c(0, 3.5),
+    name = 'Temperature anomaly (°C)', expand = c(0, 0)) +
   scale_size_area(name = 'Annual CO2 emissions (excluding land use)',
     max_size = 80, guide = FALSE) +
-  scale_fill_viridis(begin = 0.5, end = 1, option = 'inferno',
-    direction = -1) +
+  # scale_fill_viridis(begin = 0.75, end = 1, limits = c(0, 3),
+  #   option = 'inferno', direction = -1, guide = FALSE) +
+  ggtitle('Historical CO2 emissions, GDP per capita and temperature rise',
+    subtitle = paste('Who contributed to the greenhouse effect,',
+      'and who suffers for it?')) +
   theme_classic(base_size = 32, base_family = plot_font) +
-  theme(legend.position = 'bottom', legend.direction = 'horizontal')
+  theme(
+    plot.title = element_text(family = plot_font_2, face = 'bold'),
+    plot.margin = margin(rep(20, 4), 'px'),
+    axis.line.y = element_blank())
 
 message(run.time(), ' rendering emissions plot')
 animation::ani.options(interval = 1 / frames_per_year)
-gganimate(bubble_plot, '~/Desktop/steamtrain-out/bubble_gdppc_scaled.mp4',
-  ani.width = 1920, ani.height = 1080)
+gganimate(stplot, '~/Desktop/steamtrain-out/bubble_gdppc_scaled.mp4',
+  ani.width = 1920, ani.height = 1080, title_frame = FALSE)
 
 message(run.time(), ' done!')
