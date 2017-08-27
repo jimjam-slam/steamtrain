@@ -2,18 +2,18 @@
 # download and combine gapminder and berkeley earth data
 # james goldie ('rensa'), august 2017
 
-library(RCurl)
-library(rvest)
 library(tidyverse)
 library(magrittr)
-library(stringr)
-library(fuzzyjoin)
+library(readxl)
 filter = dplyr::filter # this is going to kill me one day
 source('util.r')
 
 # constants
 on_url = 'https://raw.githubusercontent.com/open-numbers/'
-berk_url = 'http://berkeleyearth.lbl.gov/auto/Regional/TAVG/Text/'
+edgar_url = 'http://edgar.jrc.ec.europa.eu/news_docs/'
+giss_url = paste0(
+  'https://data.giss.nasa.gov/tmp/modelE/ltmap/',
+  'tmp.4_obsLOTI_E5_12_1880_2017_1951_1980-0/')
 year_start = 1900
 year_end = 2012
 
@@ -82,6 +82,28 @@ co2 =
   inner_join(geo_co2) %>%
   select(name, year, co2)
 
+# now the edgar data (to extend our series an extra two years to 2015)
+# if (!file.exists('data/edgar-co2-raw.xls'))
+# {
+#   message(run.time(), ' downloading edgar data')
+#   download.file(
+#     paste0(edgar_url, 'CO2_1970-2015_dataset_of_CO2_report_2016.xls'),
+#     destfile = 'data/edgar-co2-raw.xls')
+# } else
+# {
+#   message(run.time(), ' found edgar data')
+# }
+# 
+# load and tidy the edgar co2 estimates
+# co2_edgar =
+#   read_excel('data/edgar-co2-raw.xls', skip = 11) %>%
+#   gather(key = year, value = co2, `1970`:`2015`) %>%
+#   rename(name = Country) %>%
+#   filter(!is.na(name)) %>%
+#   mutate(
+#     year = year %>% as.integer,
+#     co2 = co2 / 1000)
+
 # combine gapminder datasets,
 # rank countries each year by their gdp per capita
 # claculation global pop, pop fraction and number of poorer people each year
@@ -98,80 +120,27 @@ gapdata = co2 %>%
     pop_poorer = cumsum(population) - population,
     pop_poorer_fraction = pop_poorer / pop_global) %>%
   ungroup() %>%
-  mutate(., emission_id = group_indices(., name, year))
+  mutate(., emission_id = group_indices(., name, year)) %>%
+  write_csv('data/gapminder-tidy.csv')
 
-# scrape a list of available berkeley earth country temp data files and
-# match them fuzzily against gapdata countries
-message(run.time(), ' scraping list of available berkeley temperature data')
-berk_files =
-  data_frame(
-    filename = berk_url %>% read_html %>% html_nodes('a') %>% html_text) %>%
-  slice(-(1:6)) %>%
-  mutate(
-    name_lowercase = str_replace(filename, '-TAVG-Trend.txt', '')) %>%
-  # drop some tricky rows (utf escaping problems? TODO)
-  filter(!name_lowercase %in% c('pará', 'côte-d\'ivoire'))
+# now the gistemp data
+if (!file.exists('data/gistemp-raw.csv'))
+{
+  message(run.time(), ' downloading gistemp data')
+  download.file(paste0(giss_url, 'global.csv'),
+    destfile = 'data/gistemp-raw.csv')
+} else
+{
+  message(run.time(), ' found gistemp data')
+}
 
-# okay, now do a loose fuzzy match between gapminder names and berkeley names and choose the best reuslts for each gapminder file. this strips out whitespace and punctuation first, as they bias the fuzzy matching algorithm
-message(run.time(), ' fuzzy joining gapminder and berkeley country names')
-gapdata_names = data_frame(
-  name = unique(gapdata$name),
-  name_nopunc = str_to_lower(str_replace_all(name, ' ', '')))
-name_matches =
-  data_frame(
-    name_lowercase = unique(berk_files$name_lowercase),
-    name_lowercase_nopunc = str_replace_all(name_lowercase, '-', ''))
-
-name_matches %<>%
-  stringdist_inner_join(gapdata_names, by = c(name_lowercase_nopunc = 'name_nopunc'),
-    max_dist = 5, distance_col = 'match_dist') %>%
-  group_by(name) %>%
-  top_n(-1, wt = match_dist) %>%
-  ungroup() %>%
-  filter(match_dist <= 1) %>%
-  select(name, name_lowercase, match_dist)
-
-# now bolt the matches onto the berkeley list and the gapminder data
-berk_files %<>% inner_join(name_matches, by = 'name_lowercase')
-gapdata %<>% inner_join(name_matches, by = 'name')
-
-# TODO - got about 160 countries between all datasets at this point
-# might need to fiddle with the strings to get the edge cases...
-
-# download berkeley files, tag each one with the country and bind them together
-temp =
-  lapply(
-    berk_files$name_lowercase, function(x)
-    {
-      if (!file.exists(paste0('data/', x, '-TAVG-Trend.txt')))
-      {
-        message(run.time(), ' downloading berkeley temperature data for ', x)
-        download.file(paste0(berk_url, x, '-TAVG-Trend.txt'),
-          destfile = paste0('data/', x, '-TAVG-Trend.txt'))
-      } else
-      {
-        message(run.time(), ' found berkeley temperature data for ', x)
-      }
-      read_table2(
-        paste0('data/', x, '-TAVG-Trend.txt'),
-        comment = '%', skip = 1, col_types = 'ii--dd------',
-        col_names = FALSE) %>%
-        mutate(name_lowercase = x)
-    }) %>%
-  bind_rows %>%
-  rename(year = X1, month = X2, temp = X5, temp_unc = X6) %>%
-  filter(year >= year_start & year <= year_end & month == 6) %>%
-  select(-month) %>%
-  mutate(
-    temp_min = temp - temp_unc,
-    temp_max = temp + temp_unc) %>%
-  inner_join(name_matches, by = 'name_lowercase')
-
-# finally, join the datasets together
-message(run.time(), ' joining berkeley and gapminder data')
-all_data =
-  inner_join(gapdata, temp,
-    by = c('name', 'name_lowercase', 'year', 'match_dist'))
-write_csv(all_data, 'data/gapminder-berkeley-tidy.csv')
+gistemp =
+  read_csv(
+    'data/gistemp-raw.csv', skip = 1, col_names = c('year', 'temp'),
+    col_types = cols(.default = col_double())) %>%
+  filter(year %% 1 > 0.45 & year %% 1 < 0.55) %>%
+  mutate(year = year %>% floor %>% as.integer) %>%
+  filter(year >= year_start & year <= year_end) %>%
+  write_csv('data/gistemp-tidy.csv')
 
 message(run.time(), ' done!')
