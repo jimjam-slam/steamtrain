@@ -24,7 +24,7 @@ on_url = 'github.com/open-numbers'
 edgar_url = 'edgar.jrc.ec.europa.eu'
 giss_url = 'data.giss.nasa.gov'
 year_start = 1900
-year_end = 2015
+year_end = 2012
 frames_per_year = 2
 plot_font_1 = 'Helvetica Neue Light'
 plot_font_2 = 'Helvetica Neue'
@@ -76,18 +76,18 @@ stplot_bg = ggplot(data = bg_data, aes(frame = .frame)) +
 
 stplot = ggplot() +
   # emission columns
-  geom_col(data = bar_data,
+  geom_density(data = bar_data,
     aes(
       x = pop_poorer_fraction + pop_fraction / 2,
       y = co2 / population * 1000000,
-      width = pop_fraction,
+      # width = pop_fraction,
       frame = .frame),
-    position = 'identity', fill = '#000000') +
+    stat = 'identity', position = 'identity', fill = '#000000', alpha = 0.5) +
   # emission bubbles
   geom_jitter(data = bubble_data,
     aes(
       x = pop_poorer_fraction + pop_fraction / 2,
-      y = 25 * atan(2 * .age) + 2.5 * sin(2 * .age),
+      y = 25 * atan(2 * .age) + 3.5 * sin(2 * .age),
       size = co2,
       frame = .frame),
     alpha = 0.1, width = 0, height = 0.1, colour = '#000000') +
@@ -95,13 +95,13 @@ stplot = ggplot() +
     aes(label = as.integer(.frame / frames_per_year + year_start),
       frame = .frame, x = 0.5, y = 15),
     size = 14, family = plot_font_2, fontface = 'bold') +
-  annotate('text', x = 0.0375, y = 15, size = 14, label = 'Poorest',
-    family = plot_font_1) +
-  annotate('text', x = 0.945, y = 15, size = 14, label = 'Wealthiest',
-    family = plot_font_1) +
-  scale_x_continuous(labels = scales::percent,
+  # annotate('text', x = 0.0375, y = 15, size = 14, label = 'Poorest',
+  #   family = plot_font_1) +
+  # annotate('text', x = 0.945, y = 15, size = 14, label = 'Wealthiest',
+  #   family = plot_font_1) +
+  scale_x_continuous(
     name = 'Percentile of per capita GDP (2010 USD)',
-    breaks = seq(0, 1, 0.25), limits = c(0, 1), expand = c(0, 0.02)) +
+    breaks = c(0, 1), labels = c('Poorest', 'Wealthiest'), limits = c(0, 1), expand = c(0, 0.02)) +
   scale_y_continuous(
     name = 'Annual per capita CO2 emissions (tonnes)',
     limits = c(0, 50), breaks = c(10, 20, 30, 40), expand = c(0, 0)) +
@@ -111,7 +111,7 @@ stplot = ggplot() +
     subtitle = paste('Who contributed to the greenhouse effect,',
       'and who suffers for it?'),
     caption = paste0(
-      'Data from Open Numbers (', on_url, '), EDGAR (', edgar_url, ') and GISTEMP (', giss_url, ')')) +
+      'Data from Open Numbers (', on_url, ') and GISTEMP (', giss_url, ')')) +
   theme_classic(base_size = 32, base_family = plot_font_1) +
   theme(
     plot.title = element_text(family = plot_font_2, face = 'bold'),
@@ -119,8 +119,8 @@ stplot = ggplot() +
     axis.ticks.x = element_blank(),
     axis.line.y = element_blank(),
     axis.ticks.y = element_blank(),
-    panel.background = element_blank(),
-    plot.background = element_blank())
+    panel.background = element_rect(fill = 'transparent', colour = NA),
+    plot.background = element_rect(fill = 'transparent', colour = NA))
 
 message(run.time(), ' rendering emissions plot and background')
 animation::ani.options(interval = 0.5 / frames_per_year)
@@ -128,6 +128,7 @@ gganimate(stplot_bg, 'steamtrain_bg.mp4',
   ani.width = 1920, ani.height = 1080, title_frame = FALSE)
 animation::ani.options(interval = 0.5 / frames_per_year)
 gganimate(stplot, 'steamtrain_content.mp4',
-  ani.width = 1920, ani.height = 1080, title_frame = TRUE)
+  ani.width = 1920, ani.height = 1080, title_frame = TRUE,
+  bg = 'transparent')
 
 message(run.time(), ' done! Output video is steamtrain.mp4.')
