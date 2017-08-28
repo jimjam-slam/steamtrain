@@ -21,3 +21,28 @@ jitter_emissions = function(seed, min_jitter = 1, max_jitter = 5)
   set.seed(seed)
   return(runif(1, min = min_jitter, max = max_jitter))
 }
+
+# iso_to_emoji: for a vector of two-letter iso codes, returns a corresponding
+# vector of unicode control sequences.
+# great for use with countrycode and emojifont!
+iso_to_emoji = function(iso_codes)
+{
+  if (!any(
+    nchar(iso_codes) == 2 |
+    is.na(iso_codes)))
+  {
+    stop('iso_to_emoji: ISO codes must be two (2) letters long.')
+  }
+  if (!any(
+    str_detect(iso_codes, pattern = '[a-z][a-z]') |
+    is.na(iso_codes)))
+  {
+    stop('iso_to_emoji: ISO codes must be letters only.')
+  }
+  
+  return(str_replace_all(str_to_lower(iso_codes), c('a' = '🇦', 'b' = '🇧', 'c' = '🇨',
+    'd' = '🇩', 'e' = '🇪', 'f' = '🇫', 'g' = '🇬', 'h' = '🇭', 'i' = '🇮',
+    'j' = '🇯', 'k' = '🇰', 'l' = '🇱', 'm' = '🇲', 'n' = '🇳', 'o' = '🇴',
+    'p' = '🇵', 'q' = '🇶', 'r' = '🇷', 's' = '🇸', 't' = '🇹', 'u' = '🇺',
+    'v' = '🇻', 'w' = '🇼', 'x' = '🇽', 'y' = '🇾', 'z' = '🇿')))
+}

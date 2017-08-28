@@ -57,9 +57,12 @@ if (length(gap_files_to_download) > 0)
 message(run.time(), ' loading and tidying any missing gapminder data')
 geo_gap =
   read_csv('data/ddf--entities--geo--country.csv') %>%
-  select(country, name)
+  select(country, gapminder_list, alternative_1, alternative_2,
+    iso3166_1_alpha2, iso3166_1_alpha3) %>%
+  rename(name = gapminder_list)
 geo_co2 =
-  read_csv('data/ddf--entities--country.csv')
+  read_csv('data/ddf--entities--country.csv') %>%
+  rename(name_co2 = name)
 
 # load and tidy gapminder data sets
 gdp_percap = 
@@ -67,12 +70,14 @@ gdp_percap =
   rename(country = geo, year = time, gdppc = gdp_per_capita_cppp) %>%
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_gap) %>%
-  select(name, year, gdppc)
+  select(name, year, gdppc, alternative_1, alternative_2,
+    iso3166_1_alpha2)
 pop =
   read_csv('data/ddf--datapoints--population--by--country--year.csv') %>%
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_gap) %>%
-  select(name, year, population)
+  select(name, year, population, alternative_1, alternative_2,
+    iso3166_1_alpha2)
 co2 =
   read_csv(paste0(
     'data/ddf--datapoints--total_co2_emissions_excluding_land_use_change_','and_forestry_mtco2--by--country--year.csv')) %>%
@@ -80,15 +85,25 @@ co2 =
     co2 = total_co2_emissions_excluding_land_use_change_and_forestry_mtco2) %>%
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_co2) %>%
-  select(name, year, co2)
+  select(name_co2, year, co2)
 
 # combine gapminder datasets,
 # rank countries each year by their gdp per capita
-# claculation global pop, pop fraction and number of poorer people each year
+# calculation global pop, pop fraction and number of poorer people each year
 message(run.time(), ' combining gapminder data')
-gapdata = co2 %>%
-  inner_join(gdp_percap, by = c('name', 'year')) %>%
-  inner_join(pop, by = c('name', 'year')) %>%
+gapdata = gdp_percap %>% inner_join(pop)
+gapdata =
+  bind_rows(list(
+    co2 %>% inner_join(gapdata,
+      by = c('name_co2' = 'name', 'year' = 'year')),
+    co2 %>% inner_join(gapdata,
+      by = c('name_co2' = 'alternative_1', 'year' = 'year')),
+    co2 %>% inner_join(gapdata,
+      by = c('name_co2' = 'alternative_2', 'year' = 'year')))) %>%
+  select(-name, -alternative_1, -alternative_2) %>%
+  rename(name = name_co2)
+gapdata$flag_emoji = iso_to_emoji(gapdata$iso3166_1_alpha2)
+gapdata %<>%
   mutate(annual_devrank = ave(gdppc, year, FUN = rank)) %>%
   group_by(year) %>%
   arrange(annual_devrank) %>%
@@ -97,6 +112,10 @@ gapdata = co2 %>%
     pop_fraction = population / pop_global,
     pop_poorer = cumsum(population) - population,
     pop_poorer_fraction = pop_poorer / pop_global) %>%
+  ungroup() %>%
+  group_by(name) %>%
+  arrange(year) %>%
+  mutate(co2_cum = cumsum(co2)) %>%
   ungroup() %>%
   mutate(., emission_id = group_indices(., name, year))
 
