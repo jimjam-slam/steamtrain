@@ -31,7 +31,7 @@ plot_font_2 = 'Helvetica Neue'
 
 all_data =
   read_csv('data/gapminder-berkeley-tidy.csv') %>%
-  replace_na(list(flag_emoji = emoji('x')))
+  replace_na(list(flag_emoji = '274e'))
 
 message(run.time(), ' trimming excess data for bubble geom')
 # bubble_data = all_data %>%
@@ -59,28 +59,70 @@ steamtrain = ggplot(all_data) +
       ymin = temp_min,
       y = temp,
       ymax = temp_max,
+      colour = world_6region,
+      text = paste(flag_emoji, name),
       frame = year)) +
   geom_text(
     aes(
       x = gdppc,
-      y = max(temp_max) + 0.25,
+      y = 2.3,
       label = flag_emoji,
+      group = world_6region,
+      text = paste(flag_emoji, name),
       size = co2_cum,
       frame = year),
-    family = 'EmojiOne', position = position_jitter(width = 0)) +
+    family = 'EmojiOne Color') +
+  geom_point(
+    aes(
+      x = gdppc,
+      y = 2.3,
+      label = flag_emoji,
+      group = world_6region,
+      size = co2_cum,
+      frame = year),
+    colour = 'black', alpha = 0.15) +
   scale_x_log10(name = 'GDP (2010 US Dollars)') +
-  scale_y_continuous(name = 'Temperature anomaly (°C)', limits = c(-2.5, 3.5)) +
-  scale_size(name = 'Cumulative CO2 emissions (Mt)', range = c(0, 20))
+  scale_y_continuous(name = 'Temperature anomaly (°C)', limits = c(-2.5, 2.5)) +
+  scale_size(name = 'Cumulative CO2 emissions (Mt)', range = c(0, 20),
+    guide = FALSE) +
+  ggtitle('Historical CO2 emissions, GDP per capita and temperature rise',
+    subtitle = paste('Who contributed to the greenhouse effect,',
+      'and who suffers for it?')) +
+  theme_classic(base_size = 16, base_family = plot_font_1) +
+  theme(plot.title = element_text(family = plot_font_2, face = 'bold'))
+
+# steamtrain2012 = ggplot(all_data %>% filter(year == 2012)) +
+#   geom_pointrange(
+#     aes(
+#       x = gdppc,
+#       ymin = temp_min,
+#       y = temp,
+#       ymax = temp_max,
+#       colour = world_6region)) +
+#   geom_emoji(
+#     aes(
+#       x = gdppc,
+#       y = 2.3,
+#       label = flag_emoji,
+#       size = co2_cum),
+#     family = 'EmojiOne Color') +
+#   scale_x_log10() +
+#   scale_y_continuous(limits = c(-2.5, 2.5)) +
+#   scale_size(range = c(0, 20), guide = FALSE) +
+#   theme_classic(base_size = 16)
   
 message(run.time(), ' rendering emissions plot')
-animation::ani.options(interval = 0.5 / frames_per_year)
-gganimate(stplot2, 'steamtrain.mp4',
-  ani.width = 1920, ani.height = 1080, title_frame = FALSE)
-
 steamtrain_plotly = steamtrain %>%
-
+  animation_opts(1000, easing = 'linear', redraw = FALSE) %>%
+  animation_slider(
+    currentvalue = list(prefix = 'Year ', font = list(color = 'black')))
+htmlwidgets::saveWidget(steamtrain_plotly, file = "steamtrain.html")
 
 message(run.time(), ' done! Render in browser with ggplotly(steamtrain_plotly)')
+
+# animation::ani.options(interval = 0.5 / frames_per_year)
+# gganimate(steamtrain, 'steamtrain.gif',
+#   ani.width = 1920, ani.height = 1080, title_frame = FALSE)
 
 # stplot = ggplot() +
 #   # temperature columns

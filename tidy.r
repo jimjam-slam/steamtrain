@@ -58,7 +58,7 @@ message(run.time(), ' loading and tidying any missing gapminder data')
 geo_gap =
   read_csv('data/ddf--entities--geo--country.csv') %>%
   select(country, gapminder_list, alternative_1, alternative_2,
-    iso3166_1_alpha2, iso3166_1_alpha3) %>%
+    iso3166_1_alpha2, world_6region, income_groups) %>%
   rename(name = gapminder_list)
 geo_co2 =
   read_csv('data/ddf--entities--country.csv') %>%
@@ -71,7 +71,14 @@ gdp_percap =
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_gap) %>%
   select(name, year, gdppc, alternative_1, alternative_2,
-    iso3166_1_alpha2)
+    iso3166_1_alpha2, world_6region, income_groups) %>%
+  mutate(world_6region = recode(world_6region,
+    'europe_central_asia' = 'Europe + Central Asia',
+    'south_asia' = 'South Asia',
+    'sub_saharan_africa' = 'Sub-Saharan Africa',
+    'america' = 'America',
+    'middle_east_north_africa' = 'Middle East + North Africa',
+    'east_asia_pacific' = 'East Asia + Pacific'))
 pop =
   read_csv('data/ddf--datapoints--population--by--country--year.csv') %>%
   filter(year >= year_start & year <= year_end) %>%
