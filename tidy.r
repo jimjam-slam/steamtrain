@@ -39,15 +39,15 @@ gap_files = data_frame(
     paste0(
       'ddf--datapoints--total_co2_emissions_excluding_land_use_change_and_',
       'forestry_mtco2--by--country--year.csv')),
-  url = paste0(on_url, repo, '/master/', file))
-gap_files_to_download = which(!file.exists(paste0('data/', gap_files$file)))
+  remote_url = paste0(on_url, repo, '/master/', file),
+  local_path = paste0('data/gapminder/', file))
+gap_files_to_download = which(!file.exists(gap_files$local_path))
 if (length(gap_files_to_download) > 0)
 {
   message(run.time(), ' downloading missing gapminder data')
   mapply(download.file,
-    gap_files$url[which(!file.exists(paste0('data/', gap_files$file)))],
-    destfile =
-      paste0('data/', gap_files$file[which(!file.exists(gap_files$file))])) 
+    gap_files$remote_url[gap_files_to_download],
+    destfile = gap_files$local_path[gap_files_to_download]) 
 } else
 {
   message(run.time(), ' found all gapminder data')
@@ -109,7 +109,8 @@ gapdata =
       by = c('name_co2' = 'alternative_2', 'year' = 'year')))) %>%
   select(-name, -alternative_1, -alternative_2) %>%
   rename(name = name_co2)
-gapdata$flag_emoji = iso_to_emoji(gapdata$iso3166_1_alpha2)
+gapdata$flag_emoji = iso_to_emoji_unicode(gapdata$iso3166_1_alpha2)
+gapdata$flag_file_basename = iso_to_emoji_ascii(gapdata$iso3166_1_alpha2)
 gapdata %<>%
   mutate(annual_devrank = ave(gdppc, year, FUN = rank)) %>%
   group_by(year) %>%
@@ -169,17 +170,17 @@ temp =
   lapply(
     berk_files$name_lowercase, function(x)
     {
-      if (!file.exists(paste0('data/', x, '-TAVG-Trend.txt')))
+      if (!file.exists(paste0('data/berkeley/', x, '-TAVG-Trend.txt')))
       {
         message(run.time(), ' downloading berkeley temperature data for ', x)
         download.file(paste0(berk_url, x, '-TAVG-Trend.txt'),
-          destfile = paste0('data/', x, '-TAVG-Trend.txt'))
+          destfile = paste0('data/berkeley/', x, '-TAVG-Trend.txt'))
       } else
       {
         message(run.time(), ' found berkeley temperature data for ', x)
       }
       read_table2(
-        paste0('data/', x, '-TAVG-Trend.txt'),
+        paste0('data/berkeley/', x, '-TAVG-Trend.txt'),
         comment = '%', skip = 1, col_types = 'ii--dd------',
         col_names = FALSE) %>%
         mutate(name_lowercase = x)
@@ -199,5 +200,26 @@ all_data =
   inner_join(gapdata, temp,
     by = c('name', 'name_lowercase', 'year', 'match_dist'))
 write_csv(all_data, 'data/gapminder-berkeley-tidy.csv')
+
+# finally, download missing flag images
+flags = data_frame(
+  basename = unique(all_data$flag_file_basename),
+  remote_url = paste0(
+    'https://raw.githubusercontent.com/eosrei/emojione-color-font/',
+    'master/assets/emojione-svg/',
+    basename, '.svg'),
+  local_path = paste0('data/flags/', basename, '.svg'))
+
+flag_files_to_download = which(!file.exists(flags$local_path))
+if (length(flag_files_to_download) > 0)
+{
+  message(run.time(), ' downloading missing flag images')
+  mapply(download.file,
+    flags$remote_url[flag_files_to_download],
+    destfile = flags$local_path[flag_files_to_download])
+} else
+{
+  message(run.time(), ' found all flag images')
+}
 
 message(run.time(), ' done!')
