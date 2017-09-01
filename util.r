@@ -71,5 +71,6 @@ iso_to_emoji_ascii = function(iso_codes, ligature_sep = '-')
     paste0(
       as.hexmode(0x1f1e5 + match(substr(iso_codes, 1, 1), letters)),
       ligature_sep,
-      as.hexmode(0x1f1e5 + match(substr(iso_codes, 2, 2), letters))))
+      as.hexmode(0x1f1e5 + match(substr(iso_codes, 2, 2), letters))) %>%
+    na_if('NA-NA'))
 }

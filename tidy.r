@@ -56,22 +56,28 @@ if (length(gap_files_to_download) > 0)
 # load and tidy gapminder country code maps
 message(run.time(), ' loading and tidying any missing gapminder data')
 geo_gap =
-  read_csv('data/ddf--entities--geo--country.csv') %>%
+  read_csv('data/gapminder/ddf--entities--geo--country.csv', na = c('')) %>%
   select(country, gapminder_list, alternative_1, alternative_2,
     iso3166_1_alpha2, world_6region, income_groups) %>%
   rename(name = gapminder_list)
 geo_co2 =
-  read_csv('data/ddf--entities--country.csv') %>%
+  read_csv('data/gapminder/ddf--entities--country.csv', na = c('')) %>%
   rename(name_co2 = name)
 
 # load and tidy gapminder data sets
 gdp_percap = 
-  read_csv('data/ddf--datapoints--gdp_per_capita_cppp--by--geo--time.csv') %>%
+  read_csv(paste0(
+    'data/gapminder/',
+    'ddf--datapoints--gdp_per_capita_cppp--by--geo--time.csv'), na = c('')) %>%
   rename(country = geo, year = time, gdppc = gdp_per_capita_cppp) %>%
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_gap) %>%
   select(name, year, gdppc, alternative_1, alternative_2,
     iso3166_1_alpha2, world_6region, income_groups) %>%
+  # namibia is a pain in the butt because of its code is NA
+  mutate(iso3166_1_alpha2 = case_when(
+    name == 'Namibia' ~ 'NA',
+    TRUE ~ iso3166_1_alpha2)) %>%
   mutate(world_6region = recode(world_6region,
     'europe_central_asia' = 'Europe + Central Asia',
     'south_asia' = 'South Asia',
@@ -80,14 +86,16 @@ gdp_percap =
     'middle_east_north_africa' = 'Middle East + North Africa',
     'east_asia_pacific' = 'East Asia + Pacific'))
 pop =
-  read_csv('data/ddf--datapoints--population--by--country--year.csv') %>%
+  read_csv(paste0(
+    'data/gapminder/',
+    'ddf--datapoints--population--by--country--year.csv'), na = c('')) %>%
   filter(year >= year_start & year <= year_end) %>%
   inner_join(geo_gap) %>%
   select(name, year, population, alternative_1, alternative_2,
     iso3166_1_alpha2)
 co2 =
   read_csv(paste0(
-    'data/ddf--datapoints--total_co2_emissions_excluding_land_use_change_','and_forestry_mtco2--by--country--year.csv')) %>%
+    'data/gapminder/','ddf--datapoints--total_co2_emissions_excluding_land_use_change_','and_forestry_mtco2--by--country--year.csv'), na = c('')) %>%
   rename(
     co2 = total_co2_emissions_excluding_land_use_change_and_forestry_mtco2) %>%
   filter(year >= year_start & year <= year_end) %>%
@@ -109,8 +117,10 @@ gapdata =
       by = c('name_co2' = 'alternative_2', 'year' = 'year')))) %>%
   select(-name, -alternative_1, -alternative_2) %>%
   rename(name = name_co2)
-gapdata$flag_emoji = iso_to_emoji_unicode(gapdata$iso3166_1_alpha2)
-gapdata$flag_file_basename = iso_to_emoji_ascii(gapdata$iso3166_1_alpha2)
+gapdata$flag_emoji =
+  iso_to_emoji_unicode(gapdata$iso3166_1_alpha2)
+gapdata$flag_file_basename =
+  iso_to_emoji_ascii(gapdata$iso3166_1_alpha2)
 gapdata %<>%
   mutate(annual_devrank = ave(gdppc, year, FUN = rank)) %>%
   group_by(year) %>%
@@ -200,26 +210,5 @@ all_data =
   inner_join(gapdata, temp,
     by = c('name', 'name_lowercase', 'year', 'match_dist'))
 write_csv(all_data, 'data/gapminder-berkeley-tidy.csv')
-
-# finally, download missing flag images
-flags = data_frame(
-  basename = unique(all_data$flag_file_basename),
-  remote_url = paste0(
-    'https://raw.githubusercontent.com/eosrei/emojione-color-font/',
-    'master/assets/emojione-svg/',
-    basename, '.svg'),
-  local_path = paste0('data/flags/', basename, '.svg'))
-
-flag_files_to_download = which(!file.exists(flags$local_path))
-if (length(flag_files_to_download) > 0)
-{
-  message(run.time(), ' downloading missing flag images')
-  mapply(download.file,
-    flags$remote_url[flag_files_to_download],
-    destfile = flags$local_path[flag_files_to_download])
-} else
-{
-  message(run.time(), ' found all flag images')
-}
 
 message(run.time(), ' done!')
