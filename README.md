@@ -1,5 +1,7 @@
 # steamtrain
 
+> **Note:** this project has been offline for a while and is now archived and read-only.
+
 This is a plot of countries' CO2 emissions and temperature change over the last century (1900–2012), arranged by GDP per capita (poor countries on the left; wealthy countries on the right).
 
 ### Background
